@@ -7,18 +7,18 @@ published: true
 ---
 
 LiteLLM に `turn_off_message_logging: true` を入れれば、会話本文はトレースに出なくなります。
-**ですが、IPアドレス・APIキーの識別情報・User-Agent・ユーザーIDは実値のまま残ります。**
+**ですが、IPアドレス・APIキーの識別情報・User-Agent・ユーザーIDは実値のまま残ります**。
 私はこれを、設定を入れて「これで安全になった」と思ったあとに見つけました。
 
-トレースは収集基盤へ送るために作るものです。送り先が外部のSaaSなら、**「どこから・どのキーで叩いたか」が社外のサーバーへ渡ります。**自社基盤に送る場合でも、トレースの閲覧権限をコードより広く開けている環境では、同じ情報が同じ範囲に見えます。
+トレースは収集基盤へ送るために作るものです。送り先が外部のSaaSなら、**「どこから・どのキーで叩いたか」が社外のサーバーへ渡ります**。自社基盤に送る場合でも、トレースの閲覧権限をコードより広く開けている環境では、同じ情報が同じ範囲に見えます。
 
-実測したところ、1リクエストで作られる主spanの属性は **55個**。会話本文はそのうち **2個**だけで、`metadata.*` が **29個（53%）**でした。`turn_off_message_logging` を入れると 55→51 になりますが、**消えた4個の内訳は会話本文2個（`gen_ai.input.messages` / `gen_ai.output.messages`）と、本文ではない2個（`gen_ai.operation.name` / `gen_ai.response.finish_reasons`）です。**`metadata.*` の29個は丸ごと残ります。
+実測したところ、1リクエストで作られる主spanの属性は **55個**。会話本文はそのうち **2個**だけで、`metadata.*` が **29個（53%）** でした。`turn_off_message_logging` を入れると 55→51 になりますが、**消えた4個の内訳は会話本文2個（`gen_ai.input.messages` / `gen_ai.output.messages`）と、本文ではない2個（`gen_ai.operation.name` / `gen_ai.response.finish_reasons`）です**。`metadata.*` の29個は丸ごと残ります。
 
-`turn_off_message_logging` が本文だけを止めることは、公式ドキュメントにも書かれています。**この記事で測ったのは、その先です。**「では何が残るのか」を55属性ぜんぶ数え、SDK直呼びと proxy 経由で値の入り方が違うことを確かめ、属性の境界を allow list で引いて15属性まで落としました。
+`turn_off_message_logging` が本文だけを止めることは、公式ドキュメントにも書かれています。**この記事で測ったのは、その先です**。「では何が残るのか」を55属性ぜんぶ数え、SDK直呼びと proxy 経由で値の入り方が違うことを確かめ、属性の境界を allow list で引いて15属性まで落としました。
 
 まず数え方を置き、そのあとに実装を書きます。
 
-**LiteLLM を例にしていますが、「計装したら何が span に載るか数える」という手順自体は、OTel SDK の `SpanExporter` を通る計装であれば同じように使えます。**
+**LiteLLM を例にしていますが、「計装したら何が span に載るか数える」という手順自体は、OTel SDK の `SpanExporter` を通る計装であれば同じように使えます**。
 
 ## まず、自分の環境で数える
 
@@ -102,10 +102,10 @@ span=raw_gen_ai_request  attrs=1
     llm.openai.stringified_raw_response
 ```
 
-**`metadata.user_api_key_*` だけで16個あります。**認証まわりの情報が、キー単位で属性に展開されています。
+**`metadata.user_api_key_*` だけで16個あります**。認証まわりの情報が、キー単位で属性に展開されています。
 
 :::message alert
-**proxy 経由で数える場合は注意があります。**LiteLLM 1.90.2 では、親span（`Received Proxy Server Request`）が存在すると、既定では `litellm_request` span が作られません。
+**proxy 経由で数える場合は注意があります**。LiteLLM 1.90.2 では、親span（`Received Proxy Server Request`）が存在すると、既定では `litellm_request` span が作られません。
 
 ```python
 # litellm/integrations/opentelemetry.py
@@ -114,18 +114,18 @@ should_create_primary_span = parent_span is None or get_secret_bool(
 )
 ```
 
-`else` 側では `self.set_attributes(parent_span, ...)` が呼ばれるので、**属性が消えるわけではなく、親spanに載ります。**span名で探していると「何も出ていない」と誤読します。
+`else` 側では `self.set_attributes(parent_span, ...)` が呼ばれるので、**属性が消えるわけではなく、親spanに載ります**。span名で探していると「何も出ていない」と誤読します。
 
-**この記事の55属性はSDK直呼びで数えた値です。**proxy で同じ名前のspanを見たい場合は `USE_OTEL_LITELLM_REQUEST_SPAN=true` を設定してください。
+**この記事の55属性はSDK直呼びで数えた値です**。proxy で同じ名前のspanを見たい場合は `USE_OTEL_LITELLM_REQUEST_SPAN=true` を設定してください。
 :::
 
 数えたあとに見るべき観点は5つです。LiteLLM に限らず、自動計装を入れたライブラリ全般で使えます。
 
-1. **属性の数を知る。**まず `len(span.attributes)` を見る
-2. **spanが何個作られるか数える。**1リクエスト＝1span とは限りません。私の環境では `litellm_request` と `raw_gen_ai_request` の2つが作られ、**プロバイダの生レスポンスは後者に載っていました**
+1. **属性の数を知る**。まず `len(span.attributes)` を見る
+2. **spanが何個作られるか数える**。1リクエスト＝1span とは限りません。私の環境では `litellm_request` と `raw_gen_ai_request` の2つが作られ、**プロバイダの生レスポンスは後者に載っていました**
 3. 各属性を「**観測に必要 / ついてきただけ**」で仕分ける。この記事の例では、最終的に残したのは55個中15個でした
-4. **停止スイッチの名前が約束している範囲を確認する。**私の環境では `turn_off_message_logging` で4属性が消えましたが、そのうち会話本文は2つでした
-5. **「残すもの」を列挙する。**「消すもの」を列挙すると、ライブラリ更新で増えた属性が既定で漏れます
+4. **停止スイッチの名前が約束している範囲を確認する**。私の環境では `turn_off_message_logging` で4属性が消えましたが、そのうち会話本文は2つでした
+5. **「残すもの」を列挙する**。「消すもの」を列挙すると、ライブラリ更新で増えた属性が既定で漏れます
 
 LiteLLM proxy を立てて実値まで確認する手順は、記事末尾の「再現手順」にあります。
 
@@ -141,7 +141,7 @@ LiteLLM proxy を立てて実値まで確認する手順は、記事末尾の「
 | OS | Windows + Git Bash |
 
 :::message
-litellm には OTel の実装が **v1 と v2 の2系統**あります。v2 は `litellm/integrations/otel/logger.py` の `OpenTelemetryV2` で、環境変数 `LITELLM_OTEL_V2` で有効化します（`otel/model/config.py` で `default=False`）。**この記事はすべて v1（既定）の挙動です。**
+litellm には OTel の実装が **v1 と v2 の2系統**あります。v2 は `litellm/integrations/otel/logger.py` の `OpenTelemetryV2` で、環境変数 `LITELLM_OTEL_V2` で有効化します（`otel/model/config.py` で `default=False`）。**この記事はすべて v1（既定）の挙動です**。
 :::
 
 計装は callback を1つ足すだけです。
@@ -151,7 +151,7 @@ litellm_settings:
   callbacks: ["otel"]
 ```
 
-exporter を指定しなければ既定で `console` になります（`opentelemetry.py` の `exporter: Union[str, SpanExporter] = "console"`）。**まず1トレース出すだけなら、Docker も収集基盤も要りません。**
+exporter を指定しなければ既定で `console` になります（`opentelemetry.py` の `exporter: Union[str, SpanExporter] = "console"`）。**まず1トレース出すだけなら、Docker も収集基盤も要りません**。
 
 ## 1. 棚卸し：1リクエストで何がspanに載るか
 
@@ -163,7 +163,7 @@ exporter を指定しなければ既定で `console` になります（`opentele
 | `litellm_request` | **55** | **`metadata.*` 29**（認証・呼び出し元・周辺情報） / コスト 10 / モデル・リクエスト 6 / トークン 3 / **会話本文 2** / その他 5 |
 | `raw_gen_ai_request` | 1 | **プロバイダの生レスポンス 1** |
 
-**`metadata.*` が29個で、全体の53%を占めています。**会話本文は2個（`gen_ai.input.messages` と `gen_ai.output.messages`）だけです。
+**`metadata.*` が29個で、全体の53%を占めています**。会話本文は2個（`gen_ai.input.messages` と `gen_ai.output.messages`）だけです。
 
 値はこう入っていました。
 
@@ -178,9 +178,9 @@ exporter を指定しなければ既定で `console` になります（`opentele
 "llm.openai.stringified_raw_response": "..."
 ```
 
-トークン数もモデル名もコストも取れます。ここは狙いどおりでした。**問題は、狙っていないものまで一緒に載ることです。**
+トークン数もモデル名もコストも取れます。ここは狙いどおりでした。**問題は、狙っていないものまで一緒に載ることです**。
 
-そして次節のとおり、**この29個は kill-switch を入れても減りません。**
+そして次節のとおり、**この29個は kill-switch を入れても減りません**。
 
 ## 2. 本文を止めても、53%は残る
 
@@ -194,7 +194,7 @@ litellm_settings:
 
 実装上も最優先で効きます（`_resolve_capture_mode()` が真っ先にこれを見て `NO_CONTENT` を返す）。本文は消えました。`raw_gen_ai_request` spanごと出なくなります。
 
-**それでも `litellm_request` は55→51属性にしか減りません。**残った中身がこれです。
+**それでも `litellm_request` は55→51属性にしか減りません**。残った中身がこれです。
 
 ```json
 "metadata.requester_ip_address":  "127.0.0.1",
@@ -203,7 +203,7 @@ litellm_settings:
 "metadata.user_api_key_user_id":  "default_user_id"
 ```
 
-**空文字ではありません。実値です。**`metadata.*` の29属性（認証・呼び出し元・周辺情報）は、丸ごと残ります。
+**空文字ではありません。実値です**。`metadata.*` の29属性（認証・呼び出し元・周辺情報）は、丸ごと残ります。
 
 :::message
 `user_api_key_hash` の中身は認証方法で変わります。**master_key なら `"litellm_proxy_master_key"` という固定エイリアス**（上の実測値がこれ）、**virtual key ならそのキーのハッシュ**が入ります。鍵そのものが平文で出るわけではありません。
@@ -212,7 +212,7 @@ litellm_settings:
 :::
 
 :::message alert
-**測り方に落とし穴があります。SDKを直接呼んだ検証では、これらの値は空文字になります。**`metadata` はspanに無条件でセットされますが、値が None のとき `""` に変換されるためです。**今回の測定で認証由来の実値が自動的に入ったのは、proxy 経由のときでした**（SDK直呼びでも `metadata` を明示的に渡せば値は入ります）。私は最初これで「キーは出るが中身は空」を見て、危うく「実害なし」と誤読しかけました。**本番と同じ経路（proxy + auth）で測ってください。**
+**測り方に落とし穴があります。SDKを直接呼んだ検証では、これらの値は空文字になります**。`metadata` はspanに無条件でセットされますが、値が None のとき `""` に変換されるためです。**今回の測定で認証由来の実値が自動的に入ったのは、proxy 経由のときでした**（SDK直呼びでも `metadata` を明示的に渡せば値は入ります）。私は最初これで「キーは出るが中身は空」を見て、危うく「実害なし」と誤読しかけました。**本番と同じ経路（proxy + auth）で測ってください**。
 :::
 
 本文（What）は消える。しかし**誰が（Who）・どこから（Where）は残る**。「本文を止めたから安全」は、**55個のうち2個を止めただけ**でした。
@@ -222,12 +222,12 @@ litellm_settings:
 
 ### なぜ allow list なのか
 
-**なぜ deny list ではなく allow list なのか。**最初は「消したいものを並べる」deny list で書いて、**1個漏らしました。**`llm.openai.stringified_raw_response` を列挙し忘れて、それだけがそのまま出力に残ったのです。**列挙漏れが、そのまま漏洩になります。**allow list なら、知らない属性が増えても既定で落ちます。
+**なぜ deny list ではなく allow list なのか**。最初は「消したいものを並べる」deny list で書いて、**1個漏らしました**。`llm.openai.stringified_raw_response` を列挙し忘れて、それだけがそのまま出力に残ったのです。**列挙漏れが、そのまま漏洩になります**。allow list なら、知らない属性が増えても既定で落ちます。
 
 ### 実装：exporter層で落とす
 
 
-**ここが本命です。**`OpenTelemetryConfig.exporter` の型が `Union[str, SpanExporter]` なので、**自前の SpanExporter を差し込めます。**
+**ここが本命です**。`OpenTelemetryConfig.exporter` の型が `Union[str, SpanExporter]` なので、**自前の SpanExporter を差し込めます**。
 
 ```python
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SpanExporter
@@ -261,7 +261,7 @@ class RedactingExporter(SpanExporter):
 
 
 :::message alert
-`ReadableSpan.attributes` は読み取り専用プロパティなので、内部の辞書を直接差し替えています。**内部APIの書き換えです。**`_format_attributes` が「dict でなければ `dict()` に変換して返すだけ」なので素の dict で動きますが、**SDKのバージョンが変われば壊れる可能性があります**（本記事は `opentelemetry-sdk==1.44.0`）。
+`ReadableSpan.attributes` は読み取り専用プロパティなので、内部の辞書を直接差し替えています。**内部APIの書き換えです**。`_format_attributes` が「dict でなければ `dict()` に変換して返すだけ」なので素の dict で動きますが、**SDKのバージョンが変われば壊れる可能性があります**（本記事は `opentelemetry-sdk==1.44.0`）。
 
 内部APIを触りたくない場合は、**OTel Collector 側の `attributes` プロセッサで落とす**方法もあります（こちらは未検証）。Collector を自分で管理しているならそちらが安全です。管理下にないなら、アプリを出る前に落とすことになります。
 :::
@@ -269,7 +269,7 @@ class RedactingExporter(SpanExporter):
 ### proxy に custom callback として入れる（実測済み）
 
 
-上の `RedactingExporter` は、SDKに直接渡すコードです。**proxy の `callbacks: ["otel"]` という組み込み指定では、exporterのインスタンスを渡せません。**
+上の `RedactingExporter` は、SDKに直接渡すコードです。**proxy の `callbacks: ["otel"]` という組み込み指定では、exporterのインスタンスを渡せません**。
 
 ただし LiteLLM proxy は、config の文字列を `get_instance_fn()` で解決して**実インスタンスを読み込めます**（`proxy/proxy_server.py`）。つまり `module.instance` 形式で書けば通ります。
 
@@ -288,7 +288,7 @@ litellm_settings:
   callbacks: otel_redact_callback.otel_redacted
 ```
 
-**この構成で実際に proxy を起動し、リクエストを通しました。**結果：
+**この構成で実際に proxy を起動し、リクエストを通しました**。結果：
 
 | 属性 | 結果 |
 |---|---|
@@ -300,10 +300,10 @@ litellm_settings:
 | `gen_ai.cost.total_cost` | 維持 |
 | `gen_ai.response.model` | 維持 |
 
-callback の読み込みエラーは0件でした。**SDK限定の話ではありません。**ただし実測したのは最小構成のproxyを別ポートで立てたものなので、**「proxy構成に投入できることは確認した」までです。**
+callback の読み込みエラーは0件でした。**SDK限定の話ではありません**。ただし実測したのは最小構成のproxyを別ポートで立てたものなので、**「proxy構成に投入できることは確認した」までです**。
 
 :::message
-OTel Collector 側（`attributes` プロセッサ等）で落とす方法もありますが、**こちらは未検証です。**アプリ側で落とすかCollectorで落とすかは、Collectorを自分が管理しているかで変わります。管理下にないなら、**アプリを出る前に落とすのが確実**だと考えました。
+OTel Collector 側（`attributes` プロセッサ等）で落とす方法もありますが、**こちらは未検証です**。アプリ側で落とすかCollectorで落とすかは、Collectorを自分が管理しているかで変わります。管理下にないなら、**アプリを出る前に落とすのが確実**だと考えました。
 :::
 
 ### ライブラリ側のスイッチは併用する
@@ -329,7 +329,7 @@ litellm v1 側で `metadata.*` をキー単位で落とす設定は見つけら�
 | ③ allow list のみ | ✗ | ✓ | **16** | 属性0 | 消える | 消える |
 | **④ 併用** | ✓ | ✓ | **15** | span消滅 | 消える | 消える |
 
-**検証環境で採用したのは ④ です。**③だけでも今回確認した項目（会話本文・生レスポンス・IP・User-Agent・キー識別情報・ユーザーID）は落ちますが、あえて二重にしました。**allow list に書き漏らしがあっても本文は litellm 側で止まり、litellm の実装が変わっても allow list が効く**——片方が破れてももう片方が残る形にしたかったからです。
+**検証環境で採用したのは ④ です**。③だけでも今回確認した項目（会話本文・生レスポンス・IP・User-Agent・キー識別情報・ユーザーID）は落ちますが、あえて二重にしました。**allow list に書き漏らしがあっても本文は litellm 側で止まり、litellm の実装が変わっても allow list が効く**——片方が破れてももう片方が残る形にしたかったからです。
 
 観測に必要な属性（トークン・コスト・モデル名）は、どの構成でも維持されました。
 
@@ -338,12 +338,12 @@ litellm v1 側で `metadata.*` をキー単位で落とす設定は見つけら�
 
 **1プロセスで複数構成を回すと、先頭しか出力されません**（`BatchSpanProcessor` の非同期エクスポートと出力キャプチャの相性）。構成ごとにプロセスを分けてください。
 
-**`ConsoleSpanExporter` は `__init__` 時点の `sys.stdout` を握ります。**`redirect_stdout` の外でインスタンス化すると出力が捕捉できず、私は「フィルタが効きすぎた」と誤判定しました。実際は正常でした。
+**`ConsoleSpanExporter` は `__init__` 時点の `sys.stdout` を握ります**。`redirect_stdout` の外でインスタンス化すると出力が捕捉できず、私は「フィルタが効きすぎた」と誤判定しました。実際は正常でした。
 
 ### 日本語は二重エスケープされる
 
 
-日本語の入力でトレースを出し、`grep` で名前を探しました。**出てきません。**一瞬「日本語は載らないのか」と思いましたが、違いました。
+日本語の入力でトレースを出し、`grep` で名前を探しました。**出てきません**。一瞬「日本語は載らないのか」と思いましたが、違いました。
 
 ```
 "gen_ai.input.messages": "[{\"role\": \"user\", ... \"content\": \"\\u60a3\\u8005\\u306e\\u6c0f\\u540d...\"}]"
@@ -365,7 +365,7 @@ Console出力に対して3通りで探した結果です。
 
 検証は Console 出力をファイルに落として Python の固定文字列検索（`in` 演算子）で行いました。`grep` を使う場合は `-F`（固定文字列）を付け、シェルのエスケープに注意してください。
 
-**「見つからない」のではなく「探し方を知らないと見つからない」が正確です。「ログをgrepしたがPIIは無かった」は、そのままでは「安全である」を意味しません。**
+**「見つからない」のではなく「探し方を知らないと見つからない」が正確です。「ログをgrepしたがPIIは無かった」は、そのままでは「安全である」を意味しません**。
 
 :::message
 この見え方は `ConsoleSpanExporter` での話です。OTLP exporter やバックエンドのUIで同じになるかは未検証です。
@@ -436,15 +436,15 @@ grep -F "metadata." proxy.log            # 誰が・どこから
 grep -F '\\u5c71\\u7530' proxy.log       # 2段エスケープされた日本語（山田）
 ```
 
-**`mock_response` は config 側に置いてください。**リクエストボディに入れても効かず、実APIを叩きにいきました。
+**`mock_response` は config 側に置いてください**。リクエストボディに入れても効かず、実APIを叩きにいきました。
 
 ## おわりに
 
 
 自動計装は便利です。callback を1行足すだけで、トークンもレイテンシもコストも見えるようになりました。
 
-**同時に、主spanだけで55個（2span合計56個）の属性が外に出るようになりました。**最終的に残したのは15個で、残りは「ついてきた」ものです。`turn_off_message_logging` を入れると4属性が消えますが、`metadata.*` の29個はそのまま残ります。**名前が約束している範囲と、自分が守りたい範囲は別物でした。**
+**同時に、主spanだけで55個（2span合計56個）の属性が外に出るようになりました**。最終的に残したのは15個で、残りは「ついてきた」ものです。`turn_off_message_logging` を入れると4属性が消えますが、`metadata.*` の29個はそのまま残ります。**名前が約束している範囲と、自分が守りたい範囲は別物でした**。
 
-計装を入れたら、**まず何が載っているかを数えることをおすすめします。**属性名を全部ダンプして眺めるだけです。そのうえで「残すもの」を決めれば、あとから増える属性も既定で落ちます。
+計装を入れたら、**まず何が載っているかを数えることをおすすめします**。属性名を全部ダンプして眺めるだけです。そのうえで「残すもの」を決めれば、あとから増える属性も既定で落ちます。
 
-トレースは「システムの中で何が起きたか」を外に出す仕組みです。**何を出すかを決めるのは、ライブラリではなく自分です。**
+トレースは「システムの中で何が起きたか」を外に出す仕組みです。**何を出すかを決めるのは、ライブラリではなく自分です**。
